@@ -301,6 +301,22 @@ func decodeNonProtoField(d *json.Decoder, unmarshaler protojson.UnmarshalOptions
 		}
 		return nil
 	}
+	if rv.Kind() == reflect.String {
+		var raw json.RawMessage
+		err := d.Decode(&raw)
+		if err != nil {
+			return err
+		}
+
+		var buf []byte
+		buf, err = raw.MarshalJSON()
+		if err != nil {
+			return err
+		}
+
+		rv.SetString(string(buf))
+		return nil
+	}
 	if _, ok := rv.Interface().(protoEnum); ok {
 		var repr interface{}
 		if err := d.Decode(&repr); err != nil {
