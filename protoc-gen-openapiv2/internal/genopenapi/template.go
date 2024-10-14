@@ -349,6 +349,7 @@ func nestedQueryParams(message *descriptor.Message, field *descriptor.Field, pre
 			Format:      schema.Format,
 			Pattern:     schema.Pattern,
 			Required:    required,
+			UniqueItems: schema.UniqueItems,
 			extensions:  schema.extensions,
 			Enum:        schema.Enum,
 		}
@@ -946,7 +947,7 @@ func fullyQualifiedNameToOpenAPIName(fqn string, reg *descriptor.Registry) (stri
 	return ret, ok
 }
 
-// Lookup message type by location.name and return a openapiv2-safe version
+// Lookup message type by location.name and return an openapiv2-safe version
 // of its FQMN.
 func lookupMsgAndOpenAPIName(location, name string, reg *descriptor.Registry) (*descriptor.Message, string, error) {
 	msg, err := reg.LookupMsg(location, name)
@@ -2936,7 +2937,6 @@ func updateswaggerObjectFromJSONSchema(s *openapiSchemaObject, j *openapi_option
 		s.Items.MinLength = j.GetMinLength()
 		s.Items.Pattern = j.GetPattern()
 		s.Items.Default = j.GetDefault()
-		s.Items.UniqueItems = j.GetUniqueItems()
 		s.Items.MaxProperties = j.GetMaxProperties()
 		s.Items.MinProperties = j.GetMinProperties()
 		s.Items.Required = j.GetRequired()
@@ -2962,7 +2962,6 @@ func updateswaggerObjectFromJSONSchema(s *openapiSchemaObject, j *openapi_option
 		s.MinLength = j.GetMinLength()
 		s.Pattern = j.GetPattern()
 		s.Default = j.GetDefault()
-		s.UniqueItems = j.GetUniqueItems()
 		s.MaxProperties = j.GetMaxProperties()
 		s.MinProperties = j.GetMinProperties()
 		s.Required = j.GetRequired()
@@ -2984,6 +2983,7 @@ func updateswaggerObjectFromJSONSchema(s *openapiSchemaObject, j *openapi_option
 			s.Format = j.GetFormat()
 		}
 	}
+	s.UniqueItems = j.GetUniqueItems()
 	s.MaxItems = j.GetMaxItems()
 	s.MinItems = j.GetMinItems()
 

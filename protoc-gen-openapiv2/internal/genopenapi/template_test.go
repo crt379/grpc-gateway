@@ -672,7 +672,7 @@ func TestMessageToQueryParameters(t *testing.T) {
 	}
 }
 
-// TestMessagetoQueryParametersNoRecursive, is a check that cyclical references between messages
+// TestMessageToQueryParametersNoRecursive, is a check that cyclical references between messages
 // are not falsely detected given previous known edge-cases.
 func TestMessageToQueryParametersNoRecursive(t *testing.T) {
 	type test struct {
@@ -683,7 +683,7 @@ func TestMessageToQueryParametersNoRecursive(t *testing.T) {
 	tests := []test{
 		// First test:
 		// Here is a message that has two of another message adjacent to one another in a nested message.
-		// There is no loop but this was previouly falsely flagged as a cycle.
+		// There is no loop but this was previously falsely flagged as a cycle.
 		// Example proto:
 		// message NonRecursiveMessage {
 		//      string field = 1;
@@ -791,8 +791,8 @@ func TestMessageToQueryParametersNoRecursive(t *testing.T) {
 	}
 }
 
-// TestMessagetoQueryParametersRecursive, is a check that cyclical references between messages
-// are handled gracefully. The goal is to insure that attempts to add messages with cyclical
+// TestMessageToQueryParametersRecursive, is a check that cyclical references between messages
+// are handled gracefully. The goal is to ensure that attempts to add messages with cyclical
 // references to query-parameters returns an error message.
 func TestMessageToQueryParametersRecursive(t *testing.T) {
 	type test struct {
@@ -802,7 +802,7 @@ func TestMessageToQueryParametersRecursive(t *testing.T) {
 
 	tests := []test{
 		// First test:
-		// Here we test that a message that references it self through a field will return an error.
+		// Here we test that a message that references itself through a field will return an error.
 		// Example proto:
 		// message DirectRecursiveMessage {
 		//      DirectRecursiveMessage nested = 1;
@@ -2062,7 +2062,7 @@ func TestApplyTemplateExtensions(t *testing.T) {
 			}
 			want := []string{"baz"}
 			if diff := cmp.Diff(got, want); diff != "" {
-				t.Errorf(diff)
+				t.Error(diff)
 			}
 		}
 		{
@@ -2073,7 +2073,7 @@ func TestApplyTemplateExtensions(t *testing.T) {
 			}
 			want := "bar"
 			if diff := cmp.Diff(got, want); diff != "" {
-				t.Errorf(diff)
+				t.Error(diff)
 			}
 		}
 
@@ -2654,13 +2654,13 @@ func TestValidateDefaultValueType(t *testing.T) {
 		},
 		{
 			"integer",
-			fmt.Sprint(math.MaxInt32 + 1),
+			fmt.Sprint(int64(math.MaxInt32) + 1),
 			"int32",
 			errors.New("the provided default value \"2147483648\" does not match provided format \"int32\""),
 		},
 		{
 			"integer",
-			fmt.Sprint(math.MaxInt64),
+			fmt.Sprint(int64(math.MaxInt64)),
 			"int64",
 			nil,
 		},
@@ -4973,7 +4973,6 @@ func TestSchemaOfField(t *testing.T) {
 						MaxLength:        10,
 						MinLength:        3,
 						Pattern:          "[a-z]+",
-						UniqueItems:      true,
 						MaxProperties:    33,
 						MinProperties:    22,
 						Required:         []string{"req"},
@@ -4982,6 +4981,7 @@ func TestSchemaOfField(t *testing.T) {
 				},
 				Title:       "field title",
 				Description: "field description",
+				UniqueItems: true,
 				MaxItems:    20,
 				MinItems:    2,
 			},
@@ -5019,7 +5019,6 @@ func TestSchemaOfField(t *testing.T) {
 						MaxLength:        10,
 						MinLength:        3,
 						Pattern:          "[a-z]+",
-						UniqueItems:      true,
 						MaxProperties:    33,
 						MinProperties:    22,
 						Required:         []string{"req"},
@@ -5028,6 +5027,7 @@ func TestSchemaOfField(t *testing.T) {
 				},
 				Title:       "field title",
 				Description: "field description",
+				UniqueItems: true,
 				MaxItems:    20,
 				MinItems:    2,
 			},
@@ -10816,7 +10816,7 @@ func TestRenderServicesOptionDeprecated(t *testing.T) {
 			methodOptions: descriptorpb.MethodOptions{
 				Deprecated: proto.Bool(true),
 			},
-			openapiOperation: &openapi_options.Operation{},
+			openapiOperation:   &openapi_options.Operation{},
 			expectedDeprecated: true,
 		},
 	}
