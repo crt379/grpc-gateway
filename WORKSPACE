@@ -5,9 +5,9 @@ load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 
 http_archive(
     name = "bazel_features",
-    sha256 = "3646ffd447753490b77d2380fa63f4d55dd9722e565d84dfda01536b48e183da",
-    strip_prefix = "bazel_features-1.19.0",
-    url = "https://github.com/bazel-contrib/bazel_features/releases/download/v1.19.0/bazel_features-v1.19.0.tar.gz",
+    sha256 = "c2596994cf63513bd44180411a4ac3ae95d32bf59148fcb6087a4642b3ffef11",
+    strip_prefix = "bazel_features-1.20.0",
+    url = "https://github.com/bazel-contrib/bazel_features/releases/download/v1.20.0/bazel_features-v1.20.0.tar.gz",
 )
 
 load("@bazel_features//:deps.bzl", "bazel_features_deps")
@@ -16,9 +16,9 @@ bazel_features_deps()
 
 http_archive(
     name = "rules_python",
-    sha256 = "ca77768989a7f311186a29747e3e95c936a41dffac779aff6b443db22290d913",
-    strip_prefix = "rules_python-0.36.0",
-    url = "https://github.com/bazelbuild/rules_python/releases/download/0.36.0/rules_python-0.36.0.tar.gz",
+    sha256 = "62ddebb766b4d6ddf1712f753dac5740bea072646f630eb9982caa09ad8a7687",
+    strip_prefix = "rules_python-0.39.0",
+    url = "https://github.com/bazelbuild/rules_python/releases/download/0.39.0/rules_python-0.39.0.tar.gz",
 )
 
 load("@rules_python//python:repositories.bzl", "py_repositories")
@@ -35,17 +35,17 @@ http_archive(
 # Define before rules_proto, otherwise we receive the version of com_google_protobuf from there
 http_archive(
     name = "com_google_protobuf",
-    sha256 = "b2340aa47faf7ef10a0328190319d3f3bee1b24f426d4ce8f4253b6f27ce16db",
-    strip_prefix = "protobuf-28.2",
-    urls = ["https://github.com/protocolbuffers/protobuf/archive/v28.2.tar.gz"],
+    sha256 = "7c3ebd7aaedd86fa5dc479a0fda803f602caaf78d8aff7ce83b89e1b8ae7442a",
+    strip_prefix = "protobuf-28.3",
+    urls = ["https://github.com/protocolbuffers/protobuf/archive/v28.3.tar.gz"],
 )
 
 http_archive(
     name = "googleapis",
-    sha256 = "aa5faa256753accaaf9b12399d52d2beb3f594d34729ca7b3cb55abb67e7567a",
-    strip_prefix = "googleapis-a26064a9cc78d4518b8a9fd2ea78891edad4d87d",
+    sha256 = "19b9c9b424968820eef83a25b19cd2ebaee20235cea8780adb7e54f48c3e9a01",
+    strip_prefix = "googleapis-9077c0ed8bda4a52290bdde16a6df91944e59c0f",
     urls = [
-        "https://github.com/googleapis/googleapis/archive/a26064a9cc78d4518b8a9fd2ea78891edad4d87d.zip",
+        "https://github.com/googleapis/googleapis/archive/9077c0ed8bda4a52290bdde16a6df91944e59c0f.zip",
     ],
 )
 
@@ -70,10 +70,10 @@ bazel_skylib_workspace()
 
 http_archive(
     name = "rules_proto",
-    sha256 = "303e86e722a520f6f326a50b41cfc16b98fe6d1955ce46642a5b7a67c11c0f5d",
-    strip_prefix = "rules_proto-6.0.0",
+    sha256 = "0e5c64a2599a6e26c6a03d6162242d231ecc0de219534c38cb4402171def21e8",
+    strip_prefix = "rules_proto-7.0.2",
     urls = [
-        "https://github.com/bazelbuild/rules_proto/archive/refs/tags/6.0.0.tar.gz",
+        "https://github.com/bazelbuild/rules_proto/archive/refs/tags/7.0.2.tar.gz",
     ],
 )
 
@@ -98,14 +98,14 @@ load("@io_bazel_rules_go//go:deps.bzl", "go_register_toolchains", "go_rules_depe
 
 go_rules_dependencies()
 
-go_register_toolchains(version = "1.21.13")
+go_register_toolchains(version = "1.22.7")
 
 http_archive(
     name = "bazel_gazelle",
-    sha256 = "b760f7fe75173886007f7c2e616a21241208f3d90e8657dc65d36a771e916b6a",
+    sha256 = "a80893292ae1d78eaeedd50d1cab98f242a17e3d5741b1b9fb58b5fd9d2d57bc",
     urls = [
-        "https://mirror.bazel.build/github.com/bazelbuild/bazel-gazelle/releases/download/v0.39.1/bazel-gazelle-v0.39.1.tar.gz",
-        "https://github.com/bazelbuild/bazel-gazelle/releases/download/v0.39.1/bazel-gazelle-v0.39.1.tar.gz",
+        "https://mirror.bazel.build/github.com/bazelbuild/bazel-gazelle/releases/download/v0.40.0/bazel-gazelle-v0.40.0.tar.gz",
+        "https://github.com/bazelbuild/bazel-gazelle/releases/download/v0.40.0/bazel-gazelle-v0.40.0.tar.gz",
     ],
 )
 

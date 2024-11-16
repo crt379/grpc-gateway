@@ -4119,6 +4119,93 @@ func TestTemplateToOpenAPIPath(t *testing.T) {
 	}
 }
 
+func getParameters(names []string) []descriptor.Parameter {
+	params := make([]descriptor.Parameter, 0)
+	for _, name := range names {
+		params = append(params, descriptor.Parameter{
+			Target: &descriptor.Field{
+				FieldDescriptorProto: &descriptorpb.FieldDescriptorProto{
+					Name: proto.String(name),
+					Type: descriptorpb.FieldDescriptorProto_TYPE_STRING.Enum(),
+				},
+				Message: &descriptor.Message{
+					File: &descriptor.File{
+						FileDescriptorProto: &descriptorpb.FileDescriptorProto{},
+					},
+					DescriptorProto: &descriptorpb.DescriptorProto{
+						Name: proto.String(""),
+					},
+				},
+				FieldMessage:      nil,
+				ForcePrefixedName: false,
+			},
+			FieldPath: []descriptor.FieldPathComponent{{
+				Name:   name,
+				Target: nil,
+			}},
+			Method: nil,
+		})
+	}
+	return params
+}
+
+func TestTemplateToOpenAPIPathExpandSlashed(t *testing.T) {
+	var tests = []struct {
+		input              string
+		expected           string
+		pathParams         []descriptor.Parameter
+		expectedPathParams []string
+		useJSONNames       bool
+	}{
+		{"/v1/{name=projects/*/documents/*}:exportResults", "/v1/projects/{project}/documents/{document}:exportResults", getParameters([]string{"name"}), []string{"project", "document"}, true},
+		{"/test/{name=*}", "/test/{name}", getParameters([]string{"name"}), []string{"name"}, true},
+		{"/test/{name=*}/", "/test/{name}/", getParameters([]string{"name"}), []string{"name"}, true},
+		{"/test/{name=test_cases/*}/", "/test/test_cases/{testCase}/", getParameters([]string{"name"}), []string{"testCase"}, true},
+		{"/test/{name=test_cases/*}/", "/test/test_cases/{test_case}/", getParameters([]string{"name"}), []string{"test_case"}, false},
+	}
+	reg := descriptor.NewRegistry()
+	reg.SetExpandSlashedPathPatterns(true)
+	for _, data := range tests {
+		reg.SetUseJSONNamesForFields(data.useJSONNames)
+		actualParts, actualParams := templateToExpandedPath(data.input, reg, generateFieldsForJSONReservedName(), generateMsgsForJSONReservedName(), data.pathParams)
+		if data.expected != actualParts {
+			t.Errorf("Expected templateToOpenAPIPath(%v) = %v, actual: %v", data.input, data.expected, actualParts)
+		}
+		pathParamsNames := make([]string, 0)
+		for _, param := range actualParams {
+			pathParamsNames = append(pathParamsNames, param.FieldPath[0].Name)
+		}
+		if !reflect.DeepEqual(data.expectedPathParams, pathParamsNames) {
+			t.Errorf("Expected mutated path params in templateToOpenAPIPath(%v) = %v, actual: %v", data.input, data.expectedPathParams, data.pathParams)
+		}
+	}
+}
+
+func TestExpandedPathParametersStringType(t *testing.T) {
+	var tests = []struct {
+		input string
+	}{
+		{"/test/{name=test_cases/*}/"}, {"/v1/{name=projects/*/documents/*}:exportResults"},
+	}
+	reg := descriptor.NewRegistry()
+	reg.SetExpandSlashedPathPatterns(true)
+	expectedParamType := openapiSchemaObject{
+		schemaCore: schemaCore{
+			Type: "string",
+		},
+	}
+	for _, data := range tests {
+		_, actualParams := templateToExpandedPath(data.input, reg, generateFieldsForJSONReservedName(), generateMsgsForJSONReservedName(), getParameters([]string{"name"}))
+		for _, param := range actualParams {
+			refs := make(refMap)
+			actualParamType := schemaOfField(param.Target, reg, refs)
+			if !reflect.DeepEqual(actualParamType, expectedParamType) {
+				t.Errorf("Expected all path parameters to be type of 'string', actual: %#+v", actualParamType)
+			}
+		}
+	}
+}
+
 func BenchmarkTemplateToOpenAPIPath(b *testing.B) {
 	const input = "/{user.name=prefix1/*/prefix2/*}:customMethod"
 
@@ -4230,6 +4317,11 @@ func templateToOpenAPIPath(path string, reg *descriptor.Registry, fields []*desc
 
 func templateToRegexpMap(path string, reg *descriptor.Registry, fields []*descriptor.Field, msgs []*descriptor.Message) map[string]string {
 	return partsToRegexpMap(templateToParts(path, reg, fields, msgs))
+}
+
+func templateToExpandedPath(path string, reg *descriptor.Registry, fields []*descriptor.Field, msgs []*descriptor.Message, pathParams []descriptor.Parameter) (string, []descriptor.Parameter) {
+	pathParts, pathParams := expandPathPatterns(templateToParts(path, reg, fields, msgs), pathParams, reg)
+	return partsToOpenAPIPath(pathParts, make(map[string]string)), pathParams
 }
 
 func TestFQMNToRegexpMap(t *testing.T) {
@@ -9633,6 +9725,209 @@ func TestRenderServicesOpenapiPathsOrderPreservedAdditionalBindings(t *testing.T
 				t.Fatalf("RPC path order not preserved, got %s want %s", got, want)
 			}
 		}
+	}
+}
+
+func TestRenderServicesOpenapiRequiredBodyFieldContainingPathParam(t *testing.T) {
+
+	var fieldBehaviorRequired = []annotations.FieldBehavior{annotations.FieldBehavior_REQUIRED}
+	var requiredFieldOptions = new(descriptorpb.FieldOptions)
+	proto.SetExtension(requiredFieldOptions, annotations.E_FieldBehavior, fieldBehaviorRequired)
+
+	bookDesc := &descriptorpb.DescriptorProto{
+		Name: proto.String("Book"),
+		Field: []*descriptorpb.FieldDescriptorProto{
+			{
+				Name:   proto.String("name"),
+				Type:   descriptorpb.FieldDescriptorProto_TYPE_STRING.Enum(),
+				Number: proto.Int32(1),
+			},
+			{
+				Name:   proto.String("type"),
+				Type:   descriptorpb.FieldDescriptorProto_TYPE_STRING.Enum(),
+				Number: proto.Int32(2),
+			},
+		},
+	}
+	addBookReqDesc := &descriptorpb.DescriptorProto{
+		Name: proto.String("AddBookReq"),
+		Field: []*descriptorpb.FieldDescriptorProto{
+			{
+				Name:     proto.String("book"),
+				Type:     descriptorpb.FieldDescriptorProto_TYPE_MESSAGE.Enum(),
+				TypeName: proto.String(".Book"),
+				Number:   proto.Int32(1),
+				Options:  requiredFieldOptions,
+			},
+			{
+				Name:    proto.String("libraryId"),
+				Type:    descriptorpb.FieldDescriptorProto_TYPE_UINT32.Enum(),
+				Number:  proto.Int32(2),
+				Options: requiredFieldOptions,
+			},
+			{
+				Name:   proto.String("isLatestEdition"),
+				Type:   descriptorpb.FieldDescriptorProto_TYPE_BOOL.Enum(),
+				Number: proto.Int32(3),
+			},
+		},
+	}
+	meth := &descriptorpb.MethodDescriptorProto{
+		Name:       proto.String("AddBook"),
+		InputType:  proto.String("AddBookReq"),
+		OutputType: proto.String("Book"),
+	}
+	svc := &descriptorpb.ServiceDescriptorProto{
+		Name:   proto.String("BookService"),
+		Method: []*descriptorpb.MethodDescriptorProto{meth},
+	}
+	bookMsg := &descriptor.Message{
+		DescriptorProto: bookDesc,
+	}
+	addBookReqMsg := &descriptor.Message{
+		DescriptorProto: addBookReqDesc,
+	}
+
+	nameField := &descriptor.Field{
+		Message:              bookMsg,
+		FieldDescriptorProto: bookMsg.GetField()[0],
+	}
+	typeField := &descriptor.Field{
+		Message:              bookMsg,
+		FieldDescriptorProto: bookMsg.GetField()[1],
+	}
+	bookMsg.Fields = []*descriptor.Field{nameField, typeField}
+
+	bookField := &descriptor.Field{
+		Message:              addBookReqMsg,
+		FieldMessage:         bookMsg,
+		FieldDescriptorProto: addBookReqMsg.GetField()[0],
+	}
+	libraryIdField := &descriptor.Field{
+		Message:              addBookReqMsg,
+		FieldDescriptorProto: addBookReqMsg.GetField()[1],
+	}
+	isLatestEditionField := &descriptor.Field{
+		Message:              addBookReqMsg,
+		FieldDescriptorProto: addBookReqMsg.GetField()[2],
+	}
+	addBookReqMsg.Fields = []*descriptor.Field{bookField, libraryIdField, isLatestEditionField}
+
+	file := descriptor.File{
+		FileDescriptorProto: &descriptorpb.FileDescriptorProto{
+			SourceCodeInfo: &descriptorpb.SourceCodeInfo{},
+			Name:           proto.String("book.proto"),
+			MessageType:    []*descriptorpb.DescriptorProto{bookDesc, addBookReqDesc},
+			Service:        []*descriptorpb.ServiceDescriptorProto{svc},
+			Options: &descriptorpb.FileOptions{
+				GoPackage: proto.String("github.com/grpc-ecosystem/grpc-gateway/runtime/internal/examplepb;example"),
+			},
+		},
+		GoPkg: descriptor.GoPackage{
+			Path: "example.com/path/to/example/example.pb",
+			Name: "example_pb",
+		},
+		Messages: []*descriptor.Message{bookMsg, addBookReqMsg},
+		Services: []*descriptor.Service{
+			{
+				ServiceDescriptorProto: svc,
+				Methods: []*descriptor.Method{
+					{
+						MethodDescriptorProto: meth,
+						RequestType:           addBookReqMsg,
+						ResponseType:          bookMsg,
+						Bindings: []*descriptor.Binding{
+							{
+								HTTPMethod: "POST",
+								PathTmpl: httprule.Template{
+									Version:  1,
+									OpCodes:  []int{0, 0},
+									Template: "/v1/books/{book.type}",
+								},
+								PathParams: []descriptor.Parameter{
+									{
+										FieldPath: descriptor.FieldPath([]descriptor.FieldPathComponent{
+											{
+												Name: "book",
+											},
+											{
+												Name: "type",
+											},
+										}),
+										Target: typeField,
+									},
+								},
+								Body: &descriptor.Body{
+									FieldPath: []descriptor.FieldPathComponent{},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+	reg := descriptor.NewRegistry()
+	fileCL := crossLinkFixture(&file)
+	err := reg.Load(reqFromFile(fileCL))
+	if err != nil {
+		t.Errorf("reg.Load(%#v) failed with %v; want success", file, err)
+		return
+	}
+	result, err := applyTemplate(param{File: fileCL, reg: reg})
+	if err != nil {
+		t.Fatalf("applyTemplate(%#v) failed with %v; want success", file, err)
+	}
+
+	paths := GetPaths(result)
+	if got, want := len(paths), 1; got != want {
+		t.Fatalf("Results path length differed, got %d want %d", got, want)
+	}
+
+	if got, want := paths[0], "/v1/books/{book.type}"; got != want {
+		t.Fatalf("Wrong results path, got %s want %s", got, want)
+	}
+
+	var operation = *result.getPathItemObject("/v1/books/{book.type}").Post
+
+	if got, want := operation.Parameters[0].Name, "book.type"; got != want {
+		t.Fatalf("Wrong parameter name 0, got %s want %s", got, want)
+	}
+
+	if got, want := operation.Parameters[0].In, "path"; got != want {
+		t.Fatalf("Wrong parameter location 0, got %s want %s", got, want)
+	}
+
+	if got, want := operation.Parameters[1].Name, "body"; got != want {
+		t.Fatalf("Wrong parameter name 1, got %s want %s", got, want)
+	}
+
+	if got, want := operation.Parameters[1].In, "body"; got != want {
+		t.Fatalf("Wrong parameter location 1, got %s want %s", got, want)
+	}
+
+	if want, is, name := "#/definitions/BookServiceAddBookBody", operation.Parameters[1].Schema.schemaCore.Ref, "operation.Parameters[1].Schema.schemaCore.Ref"; !reflect.DeepEqual(is, want) {
+		t.Fatalf("%s = %s want to be %s", name, want, is)
+	}
+
+	definition, found := result.Definitions["BookServiceAddBookBody"]
+	if !found {
+		t.Fatalf("expecting definition to contain BookServiceAddBookBody")
+	}
+
+	if want, is, name := 3, len(*definition.Properties), "len(*definition.Properties)"; !reflect.DeepEqual(is, want) {
+		t.Fatalf("%s = %d want to be %d", name, want, is)
+	}
+
+	for index, keyValue := range []string{"book", "libraryId", "isLatestEdition"} {
+		if got, want := (*definition.Properties)[index].Key, keyValue; got != want {
+			t.Fatalf("Wrong definition property %d, got %s want %s", index, got, want)
+		}
+	}
+
+	correctRequiredFields := []string{"book", "libraryId"}
+	if got, want := definition.Required, correctRequiredFields; !reflect.DeepEqual(got, want) {
+		t.Fatalf("Wrong required fields in body definition, got = %s, want = %s", got, want)
 	}
 }
 
